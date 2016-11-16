@@ -57,28 +57,36 @@ Module.prototype.require = function(){
 var vm = require('vm');
 var orig_func = vm.runInThisContext;
 vm.runInThisContext = function(){
-    var scriptPath = arguments['1'];
-    if(scriptPath.indexOf('meteorhacks_cluster') != -1){
-        console.error("You are using the Meteorhacks cluster package, which is incompatible with Passenger, a non-functional shim was returned and your app may still work. However, please remove the cluster code as soon as possible.");
-        return (function(){
-            Package['meteorhacks:cluster'] = {
-				Cluster: {
- 					_publicServices				: {},
-					_registeredServices			: {},
-					_discoveryBackends			: { mongodb: {} },
-					connect						: function(){return false;},
-					allowPublicAccess			: function(){return false;},
-					discoverConnection			: function(){return false;},
-					register					: function(){return false;},
-					_isPublicService			: function(){return false;},
-					registerDiscoveryBackend	: function(){return false;},
-					_blockCallAgain				: function(){return false;}
-				}
-			};
-		});
-    }else{
-        return orig_func.apply(this, arguments);
-    }
+	try{
+		var scriptPath = arguments['1'];
+		if (typeof scriptPath == 'object') {
+			scriptPath = scriptPath['filename'];
+		}
+		if(scriptPath.indexOf('meteorhacks_cluster') != -1){
+			console.error("You are using the Meteorhacks cluster package, which is incompatible with Passenger, a non-functional shim was returned and your app may still work. However, please remove the cluster code as soon as possible.");
+			return (function(){
+				Package['meteorhacks:cluster'] = {
+					Cluster: {
+ 						_publicServices				: {},
+						_registeredServices			: {},
+						_discoveryBackends			: { mongodb: {} },
+						connect						: function(){return false;},
+						allowPublicAccess			: function(){return false;},
+						discoverConnection			: function(){return false;},
+						register					: function(){return false;},
+						_isPublicService			: function(){return false;},
+						registerDiscoveryBackend	: function(){return false;},
+						_blockCallAgain				: function(){return false;}
+					}
+				};
+			});
+		}else{
+			return orig_func.apply(this, arguments);
+		}
+	} catch (e) {
+		console.error("Failed to install shim to guard against Meteor Cluster Package. Error: " + e.message);
+		return orig_func.apply(this, arguments);
+	}
 };
 
 var LineReader = require('phusion_passenger/line_reader').LineReader;
